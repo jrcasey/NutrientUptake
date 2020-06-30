@@ -7,7 +7,7 @@
 % John R. Casey - 05/18/2020
 % jrcasey.github.io
 % github.com/jrcasey/
-% Implements a steady-state acclimation model of substrate uptake using E coli growth on glucose as a test case. 
+
 % Questions? Feedback?
 % jrcasey@mit.edu
 
@@ -20,6 +20,7 @@ A = 3.9147e-17; % PtsG catchment area (m2), measured using modeled protein struc
 T = 37; % Temperature (K), measured by Schmidt et al., 2016
 MW = 180.156; % Hydrated molecular weight of glucose (Da)
 u = 0; % Advective velocity (m s-1)
+
 %% Compute molecular diffusivity
 D = getDiffusivity(MW,T); % Hydrated molecular diffusivity (m2 s-1) 
 
@@ -126,7 +127,7 @@ v_Plane2 = v_Plane .* 1e15 .* 3600; %fmol cell-1 h-1
 nE = [2381 3919 6753 9402]; % transporters per cell corresponding to 0.12, 0.20, 0.35, and 0.50 h-1
 rE = 1e-7.*[7.683 7.919 8.306 8.628]; % radius (m)
 muE = [0.12 0.20 0.35 0.50]; % growth rate (h-1)
-mu_max = 1.80; % maximum growth rate (h-1)
+mu_max = 1.80; % maximum growth rate (h-1) Currently using Schmidt's LB growth rate
 
 % calculate concentrations
 for i = 1:numel(nE)    
@@ -164,7 +165,7 @@ colormap('jet')
 ylabel(h, 'Uptake rate [fmol cell^-^1 h^-^1]');
 set(gca,'FontSize',20);
 set(gca,'XScale','log');
-if max(n_opt_minDP) > nLim
+if max(n_opt_minDP) > nLim % Ugly AF
     if SA_transition
         hl = legend([h4, h2, h3, h5, h6],[{'Schmidt et al., 2016'},{'n^*'},{'n_m_a_x'},{'S_S_A^l^b'},{'S_S_A^u^b'}])
     else
@@ -197,16 +198,4 @@ set(hl,'EdgeColor','w')
 set(gca,'FontSize',20)
 
 
-%% calculate correlation between model and observed n and uptake
-S_E2 = [S_E 33];
-for a = 1:numel(S_E2)
-    [junk, match_idx(a)] = min(abs(S-S_E2(a)));
-end
-x1 = [nE nG]
-y1 = n_opt_minDP(match_idx);
 
-x2 = [v_E VmaxG].*1e15.*3600;
-y2 = v_P(match_idx);
-
-mdl1 = LinearModel.fit(x1(1:4),y1(1:4));
-mdl2 = LinearModel.fit(x2(1:4),y2(1:4));
