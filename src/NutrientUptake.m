@@ -9,7 +9,9 @@
 % Play around with the parameters to see how the model behaves with your
 % favorite transporter! If you're interested in the nuts and bolts of how
 % to get VmaxG using FBA, or in measuring A for your transporter, let me
-% know and I'll share that code as well.
+% know and I'll share some pointers on how that can be done as well. I
+% didn't include here because of all the dependencies, but it's fairly
+% easy.
 
 % John R. Casey - 05/18/2020
 % https://jrcasey.github.io
