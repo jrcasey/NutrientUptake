@@ -1,12 +1,19 @@
 %% Nutrient uptake model
 % Accompaniment to Casey and Follows, 2020; PLOS Computational Biology
 
+% Link to full text: 
+
 % Please refer to the article for details of how parameters were derived or
 % measured.
 
+% Play around with the parameters to see how the model behaves with your
+% favorite transporter!
+
 % John R. Casey - 05/18/2020
-% jrcasey.github.io
-% github.com/jrcasey/
+% https://jrcasey.github.io
+
+% Fork or clone from:
+% https://github.com/jrcasey/NutrientUptake
 
 % Questions? Feedback?
 % jrcasey@mit.edu
@@ -20,6 +27,10 @@ A = 3.9147e-17; % PtsG catchment area (m2), measured using modeled protein struc
 T = 37; % Temperature (K), measured by Schmidt et al., 2016
 MW = 180.156; % Hydrated molecular weight of glucose (Da)
 u = 0; % Advective velocity (m s-1)
+
+%% define a vector of substrate concentrations (easier to see in log space)
+S_res = 500; % resolution in the S domain
+S = logspace(-4,2,S_res); % Nutrient concentration range (mole m-3). You may need to adjust this for another transport process
 
 %% Compute molecular diffusivity
 D = getDiffusivity(MW,T); % Hydrated molecular diffusivity (m2 s-1) 
@@ -36,12 +47,9 @@ n_max = f_max.*(4.*pi().*(r.^2))./A; % cell-1
 
 %% Calculate various critical concentrations
 
-% define a vector of substrate concentrations (easier to see in log space)
-S = logspace(-4,2,500); % Nutrient concentration range (mole m-3)
-
 % Lower bound to growth limited domain of n-star
 S_G_lb = (nG.*kcat) ./ (D.*r); % mol m-3
-S_G_lb_idx = min(find(S-S_G_lb >= 0)); % concentration index
+S_G_lb_idx = min(find(S-S_G_lb >= 0)); % nearest concentration index in S
 
 % Calculate S-star. This is the positive root of the polynomial
 % intersection of n_optP and n_optD.
@@ -52,16 +60,16 @@ c = -ks_p;
 p = [a b c];
 y0 = roots(p);
 S_star = y0(1); % mol m-3
-S_star_idx = min(find(S-S_star >= 0)); % concentration index
+S_star_idx = min(find(S-S_star >= 0)); % nearest concentration index in S
 
 % Lower and upper bounds of surface area limitation domain (true if optimal
 % n excedes n_max
 max_n_opt = (ks_p + S(S_star_idx)) ./ ((S(S_star_idx)./nG) - (kcat./(D.*r)));
 if max_n_opt > n_max
     S_SA_lb = (n_max .* kcat) ./ (r .* D); % mol m-3
-    S_SA_lb_idx = min(find(S-S_SA_lb >= 0)); % concentration index
+    S_SA_lb_idx = min(find(S-S_SA_lb >= 0)); % nearest concentration index in S
     S_SA_ub = ( ((n_max .* kcat)./(D.*r)) + ks_p ) ./ ( (n_max./nG) -1 ); % mol m-3
-    S_SA_ub_idx = min(find(S-S_SA_ub >= 0)); % concentration index
+    S_SA_ub_idx = min(find(S-S_SA_ub >= 0)); % nearest concentration index in S
     SA_transition = true;
 else
     SA_transition = false;
@@ -69,9 +77,9 @@ end
 
 %% Compute optimal number of transporters
 
-% In the adaptive range, such that v = vmax
+% In the growth limit range, such that v = vmax
 n_optG = (ks_p + S) ./ ((S./nG) - (kcat./(D.*r))); % cell-1
-% Constrain to the feasible domain
+% Constrain to the feasible domain (nans outside)
 n_optG(1:S_G_lb_idx-1) = NaN;
 
 % In the diffusive domain, such that v = vD
@@ -84,23 +92,23 @@ if SA_transition
     n_optSA(S_SA_lb_idx:S_SA_ub_idx) = n_max; % cell-1
 end
 
-% Minimum of both sets
-n_opt_minDP = min([n_optG;n_optSA;n_optD]); % cell-1
+% Minimum of all three sets
+n_opt_minDP = nanmin([n_optG;n_optSA;n_optD]); % cell-1
 
 %% Compute uptake for optimal n
 
-for i = 1:numel(S)
-    Vmax(i) = n_opt_minDP(i).*kcat; % mole cell-1 s-1
-    [ks_d(i), junk] = getK(Vmax(i), kcat, n_opt_minDP(i), r, A, D, u); % mol m-3
-    [v(i)] = getUptake(S(i),Vmax(i),ks_d(i), ks_p); % mole cell-1 s-1
+for a = 1:numel(S)
+    Vmax(a) = n_opt_minDP(a).*kcat; % mole cell-1 s-1
+    [ks_d(a), junk] = getK(Vmax(a), kcat, n_opt_minDP(a), r, A, D, u); % mol m-3
+    [v(a)] = getUptake(S(a),Vmax(a),ks_d(a), ks_p); % mole cell-1 s-1
 end
 ks = ks_d + ks_p; % mol m-3
 v_P = v.*1e15.*3600; % fmol cell-1 h-1
 
 %% MM of G limit cells for comparison
 [ks_d3, junk] = getK(VmaxG, kcat, nG, r, A, D, u);
-for i = 1:numel(S)
-    [v3(i)] = getUptake(S(i),VmaxG,ks_d3, ks_p); % mole cell-1 s-1
+for a = 1:numel(S)
+    [v3(a)] = getUptake(S(a),VmaxG,ks_d3, ks_p); % mole cell-1 s-1
 end
 ks3 = ks_d3 + ks_p;
 v_P3 = v3.*1e15.*3600;
@@ -110,15 +118,15 @@ v_P3 = v3.*1e15.*3600;
 vD = 4*pi()*r .* D .* S .* ( (n_optD.*A) ./ (4.*pi().*(r.^2)) ); % mole cell-1 s-1
 
 %% Uptake in the n vs S plane
-n_res = 100;
-nLim = 0.6*n_max;
+n_res = 100; % resolution in the n domain
+nLim = 0.6*n_max; % choose some maximum value for the domain... you'll need to adjust this to zoom in on the region you're interested in.
 n_Plane = linspace(1,nLim,n_res);
 % loop through the plane and compute uptake rate at each pixel
-for i = 1:numel(n_Plane)
-    Vmax_Plane = n_Plane(i).*kcat;
-    [ks_d_Plane, ks_p_Plane] = getK(Vmax_Plane, kcat, n_Plane(i), r, A, D, u); % mol m-3
-    for j = 1:numel(S)
-        [v_Plane(i,j)] = getUptake(S(j), Vmax_Plane, ks_d_Plane, ks_p_Plane); % mole cell-1 s-1
+for a = 1:numel(n_Plane)
+    Vmax_Plane = n_Plane(a).*kcat;
+    [ks_d_Plane, ks_p_Plane] = getK(Vmax_Plane, kcat, n_Plane(a), r, A, D, u); % mol m-3
+    for b = 1:numel(S)
+        [v_Plane(a,b)] = getUptake(S(b), Vmax_Plane, ks_d_Plane, ks_p_Plane); % mole cell-1 s-1
     end
 end
 v_Plane2 = v_Plane .* 1e15 .* 3600; %fmol cell-1 h-1
@@ -127,17 +135,17 @@ v_Plane2 = v_Plane .* 1e15 .* 3600; %fmol cell-1 h-1
 nE = [2381 3919 6753 9402]; % transporters per cell corresponding to 0.12, 0.20, 0.35, and 0.50 h-1
 rE = 1e-7.*[7.683 7.919 8.306 8.628]; % radius (m)
 muE = [0.12 0.20 0.35 0.50]; % growth rate (h-1)
-mu_max = 1.80; % maximum growth rate (h-1) Currently using Schmidt's LB growth rate
+mu_max = 1.80; % maximum growth rate (h-1) using Schmidt's LB batch growth rate
 
-% calculate concentrations
-for i = 1:numel(nE)    
-    VmaxE(i) = kcat.*nE(i);
-    [ks_d_E(i), ks_p_E(i)] = getK(VmaxE(i), kcat, nE(i), rE(i), A, D, u); 
+% calculate steady-state glucose concentrations in the chemostat
+for a = 1:numel(nE)    
+    VmaxE(a) = kcat.*nE(a);
+    [ks_d_E(a), ks_p_E(a)] = getK(VmaxE(a), kcat, nE(a), rE(a), A, D, u); 
 end
 ks_E = ks_p_E + ks_d_E;
 S_E = (muE .* ks_E) ./ (mu_max - muE); % mol m-3
-for i = 1:numel(nE)
-    [v_E(i)] = getUptake(S_E(i), VmaxE(i), ks_d_E(i), ks_p_E(i)); % mole cell-1 s-1
+for a = 1:numel(nE)
+    [v_E(a)] = getUptake(S_E(a), VmaxE(a), ks_d_E(a), ks_p_E(a)); % mole cell-1 s-1
 end
 v_E2 = v_E .* 1e15 .* 3600; %fmol cell-1 h-1
 
