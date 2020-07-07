@@ -1,11 +1,13 @@
 # NutrientUptake
-Accompanying Matlab code to Casey and Follows, 2020.
+
+Accompanying Matlab code to Casey and Follows, 2020. A steady-state model of microbial acclimation to substrate limitation. PLOS Computational Biology (in review)
 
 ![Figure 3](https://github.com/jrcasey/NutrientUptake/blob/master/assets/Figure_3_new.jpg)
 
-Application of our steady-state acclimation model to *Escherichia coli* K12 BW25113 growth in glucose-limited chemostats and glucose-replete batch cultures ([Schmidt *et al*., 2016](https://www.nature.com/articles/nbt.3418)) and the latest genome-scale metabolic model of *E. coli* K12 MG1566 (*i*ML1515; [Monk *et al*., 2017](https://www.nature.com/articles/nbt.3956)). Please email me (jrcasey at mit dot edu) with feedback or questions!
+An application of our steady-state acclimation model of nutrient transport: *Escherichia coli* K12 BW25113 growth in glucose-limited chemostats and glucose-replete batch cultures ([Schmidt *et al*., 2016](https://www.nature.com/articles/nbt.3418)) and the latest genome-scale metabolic model of *E. coli* K12 MG1566 (*i*ML1515; [Monk *et al*., 2017](https://www.nature.com/articles/nbt.3956)). Please email me (jrcasey at mit dot edu) with feedback or questions!
 
-No bugs with Matlab 2019b.
+No bugs found so far with Matlab 2019b. Parameters determined by FBA and molecular modeling are not included here (too many dependencies to wrangle) but I'd be happy to guide you through our approach to that if you're interested in applying this model to another microbe or another transport process. 
 
+## Instructions
 Clone, add the new directory to Matlab's path, navigate to `src/NutrientUptake.m`, and hit run!
 
