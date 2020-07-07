@@ -7,7 +7,9 @@
 % measured.
 
 % Play around with the parameters to see how the model behaves with your
-% favorite transporter!
+% favorite transporter! If you're interested in the nuts and bolts of how
+% to get VmaxG using FBA, or in measuring A for your transporter, let me
+% know and I'll share that code as well.
 
 % John R. Casey - 05/18/2020
 % https://jrcasey.github.io
@@ -24,26 +26,31 @@ VmaxG = 1.77e-18; % Maximum uptake rate in replete batch (mol cell-1 s-1), deriv
 nG = 2775; % Transporter abundance in replete batch (cell-1), measured by Schmidt et al., 2016
 r = 8.785e-7; % Cell radius (m), measured by Schmidt et al., 2016
 A = 3.9147e-17; % PtsG catchment area (m2), measured using modeled protein structure.
-T = 37; % Temperature (K), measured by Schmidt et al., 2016
-MW = 180.156; % Hydrated molecular weight of glucose (Da)
+T = 37; % Temperature (C), measured by Schmidt et al., 2016
+MW = 180.156; % Molecular weight of glucose (Da). Be sure that your molecule is hydrated before calculating MW
 u = 0; % Advective velocity (m s-1)
 
 %% define a vector of substrate concentrations (easier to see in log space)
+
 S_res = 500; % resolution in the S domain
 S = logspace(-4,2,S_res); % Nutrient concentration range (mole m-3). You may need to adjust this for another transport process
 
 %% Compute molecular diffusivity
+
 D = getDiffusivity(MW,T); % Hydrated molecular diffusivity (m2 s-1) 
 
 %% Compute transporter in vivo catalytic rate
-kcat = VmaxG./nG; % catalytic constant (moleculas tp-1 s-1)
+
+kcat = VmaxG./nG; % catalytic constant (molecules tp-1 s-1)
 
 %% Compute maximum number of transporters
-f_max = 0.085; % Maximum fraction of the cell surface that can be covered by transporters... wonkiest term in here.
+
+f_max = 0.085; % Maximum fraction of the cell surface that can be covered by transporters... wonkiest term in here. See text for a discussion of n_max.
 n_max = f_max.*(4.*pi().*(r.^2))./A; % cell-1
 
-%% Get batch-acclimated parameters
-[ks_d, ks_p] = getK(VmaxG, kcat, nG, r, A, D, u); % limits of half saturation concentration (mol m-3)
+%% Get glucose-replete batch-acclimated parameters
+
+[ks_d, ks_p] = getK(VmaxG, kcat, nG, r, A, D, u); % porter limit and diffusive limit of half saturation concentration (mol m-3)
 
 %% Calculate various critical concentrations
 
@@ -105,13 +112,14 @@ end
 ks = ks_d + ks_p; % mol m-3
 v_P = v.*1e15.*3600; % fmol cell-1 h-1
 
-%% MM of G limit cells for comparison
-[ks_d3, junk] = getK(VmaxG, kcat, nG, r, A, D, u);
+%% Michaelis-Menten kinetics for glucose-replete acclimated cells, just for comparison
+
+[ks_d3, junk] = getK(VmaxG, kcat, nG, r, A, D, u); % mol m-3
 for a = 1:numel(S)
     [v3(a)] = getUptake(S(a),VmaxG,ks_d3, ks_p); % mole cell-1 s-1
 end
-ks3 = ks_d3 + ks_p;
-v_P3 = v3.*1e15.*3600;
+ks3 = ks_d3 + ks_p; % mol m-3
+v_P3 = v3.*1e15.*3600; % mole cell-1 s-1
 
 %% Compute maximum diffusive flux toward the cell
 % Based on Berg and Purcell, 1977
@@ -123,31 +131,32 @@ nLim = 0.6*n_max; % choose some maximum value for the domain... you'll need to a
 n_Plane = linspace(1,nLim,n_res);
 % loop through the plane and compute uptake rate at each pixel
 for a = 1:numel(n_Plane)
-    Vmax_Plane = n_Plane(a).*kcat;
+    Vmax_Plane = n_Plane(a).*kcat; % mole cell-1 s-1
     [ks_d_Plane, ks_p_Plane] = getK(Vmax_Plane, kcat, n_Plane(a), r, A, D, u); % mol m-3
     for b = 1:numel(S)
         [v_Plane(a,b)] = getUptake(S(b), Vmax_Plane, ks_d_Plane, ks_p_Plane); % mole cell-1 s-1
     end
 end
-v_Plane2 = v_Plane .* 1e15 .* 3600; %fmol cell-1 h-1
+v_Plane2 = v_Plane .* 1e15 .* 3600; % fmol cell-1 h-1
 
-% Add experimental data from Schmidt et al., 2016
+%% Add experimental data from Schmidt et al., 2016
+
 nE = [2381 3919 6753 9402]; % transporters per cell corresponding to 0.12, 0.20, 0.35, and 0.50 h-1
 rE = 1e-7.*[7.683 7.919 8.306 8.628]; % radius (m)
 muE = [0.12 0.20 0.35 0.50]; % growth rate (h-1)
 mu_max = 1.80; % maximum growth rate (h-1) using Schmidt's LB batch growth rate
 
-% calculate steady-state glucose concentrations in the chemostat
+% calculate steady-state glucose concentrations in the chemostats
 for a = 1:numel(nE)    
-    VmaxE(a) = kcat.*nE(a);
-    [ks_d_E(a), ks_p_E(a)] = getK(VmaxE(a), kcat, nE(a), rE(a), A, D, u); 
+    VmaxE(a) = kcat.*nE(a); % mole cell-1 s-1
+    [ks_d_E(a), ks_p_E(a)] = getK(VmaxE(a), kcat, nE(a), rE(a), A, D, u); % mol m-3 
 end
-ks_E = ks_p_E + ks_d_E;
+ks_E = ks_p_E + ks_d_E; % mol m-3
 S_E = (muE .* ks_E) ./ (mu_max - muE); % mol m-3
 for a = 1:numel(nE)
     [v_E(a)] = getUptake(S_E(a), VmaxE(a), ks_d_E(a), ks_p_E(a)); % mole cell-1 s-1
 end
-v_E2 = v_E .* 1e15 .* 3600; %fmol cell-1 h-1
+v_E2 = v_E .* 1e15 .* 3600; % fmol cell-1 h-1
 
 %% Plot results
 
@@ -173,7 +182,7 @@ colormap('jet')
 ylabel(h, 'Uptake rate [fmol cell^-^1 h^-^1]');
 set(gca,'FontSize',20);
 set(gca,'XScale','log');
-if max(n_opt_minDP) > nLim % Ugly AF
+if max(n_opt_minDP) > nLim % Ugly AF but works
     if SA_transition
         hl = legend([h4, h2, h3, h5, h6],[{'Schmidt et al., 2016'},{'n^*'},{'n_m_a_x'},{'S_S_A^l^b'},{'S_S_A^u^b'}])
     else
