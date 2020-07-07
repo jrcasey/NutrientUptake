@@ -11,8 +11,8 @@ No bugs found so far with Matlab 2019b. Parameters determined by FBA and molecul
 Please email me (jrcasey at mit dot edu) with feedback or questions!
 
 ## Instructions
-1. Fork or clone this repo 'https://github.com/jrcasey/NutrientUptake.git' to a local directory
-2. Add the new directory to Matlab's path (you could use 'pathtool' or 'addpath(path/to/repo))')
+1. Fork or clone this repo `https://github.com/jrcasey/NutrientUptake.git` to a local directory
+2. Add the new directory to Matlab's path (you could use `pathtool` or `addpath(path/to/repo))`)
 3. Navigate to `src/NutrientUptake.m` and hit run!
 
 You should get a plot that looks like this:
