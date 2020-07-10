@@ -1,7 +1,7 @@
 # NutrientUptake
 ![license badge](https://img.shields.io/github/license/jrcasey/NutrientUptake) ![languange badge](https://img.shields.io/github/languages/top/jrcasey/NutrientUptake) ![size badge](https://img.shields.io/github/repo-size/jrcasey/NutrientUptake)
 
-Accompanying Matlab code to Casey, J.R., Follows, M.J., 2020. A steady-state model of microbial acclimation to substrate limitation. *PLOS Computational Biology* (in review)
+Accompanying Matlab code to Casey, J.R., Follows, M.J., 2020. A steady-state model of microbial acclimation to substrate limitation. *PLOS Computational Biology* (accepted; link to ms soon)
 
 ![Figure 3](https://github.com/jrcasey/NutrientUptake/blob/master/assets/Figure_3.jpg)
 
